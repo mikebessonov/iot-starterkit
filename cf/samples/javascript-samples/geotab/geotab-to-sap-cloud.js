@@ -16,7 +16,7 @@
  * order and limit the load on the servers.
  *
  * @author Mikhail Bessonov <mikhail.bessonov@sap.com>
- * @license ?
+ * @license SAP Sample Code License Agreement
  */
 
 // Imports
@@ -33,7 +33,7 @@ const Swagger = require('swagger-client');
 const Geotab_API = require('mg-api-node');
 
 // SAP modules
-const SAP_IoT_device_REST = require('../sap-iots-device-rest');
+const SAP_IoT_device_REST = require('sap-iots-device-rest');
 
 
 // Constants
@@ -49,45 +49,79 @@ const MAX_RECORDS_PER_ITERATION = 100;
  * Data types known by SAP IoT Service.
  * @enum {string}
  */
-const DATATYPE = {
-    integer: 'integer', 
-    long: 'long', 
-    float: 'float', 
-    double: 'double',
-    boolean: 'boolean', 
-    string: 'string', 
-    binary: 'binary', 
-    date: 'date'
+const DataType = {
+    INTEGER: 'integer', 
+    LONG: 'long', 
+    FLOAT: 'float', 
+    DOUBLE: 'double',
+    BOOLEAN: 'boolean', 
+    STRING: 'string', 
+    BINARY: 'binary', 
+    DATE: 'date'
 }
 
 // Read the configuration file.
 const config = readConfigFile('config.json');
 
-/** Geotab API */
+/**
+ * An instance of the Geotab API.
+ * @type {Object}
+ */
 const geotab = new Geotab_API(config.Geotab_username, config.Geotab_password, config.Geotab_database);
 
-/** The URL of the Swagger (OpenAPI 2.0) specification of the SAP IoT Service northbound API */
+/** 
+ * The URL of the Swagger (OpenAPI 2.0) specification of the SAP IoT Service northbound API
+ * @type {string}
+ */
 const SAP_Swagger_API = `https://${config.SAP_instance}.${config.SAP_landscape}/${config.SAP_instance}/iot/core/api/v1/doc/swagger/api`;
 
 /**
+ * A proxy object for posting measurement data to SAP IoT Service.
+ * 
  * The IoT Service data model allows for creating router devices that are authenticated once and then
  * forward the data on behalf of other devices.
+ * @type {Object}
  */
-let router_device;
+let routerDevice;
 
-/** An instance of the SAP IoT Service northbound API instantiated with the user credentials */
+/** 
+ * An instance of the SAP IoT Service northbound API.
+ * 
+ * The instance is created with the user credentials and the tenant ID, and it allows for creating devices, sensors, etc.
+ * for the corresponding SAP IoT Service tenant.
+ * @type {Object}
+ */
 let SAP_DeviceManagement;
 
-/** The ID of the SAP IoT Services Cloud REST Gateway */
+/** 
+ * The ID of the SAP IoT Services Cloud REST Gateway.
+ * @type {string}
+ */
 let gatewayId;
 
 // IoT Services data types to which the corresponding Geotab typeNames are mapped.
 // More types like these can be created by the programmer.
+/** 
+ * The ID of the SAP sensor type corresponding to the Geotab typeName 'LogRecord'.
+ * @type {string}
+ */
 let sensorTypeId_LogRecord;
+/** 
+ * The ID of the SAP sensor type corresponding to the Geotab typeName 'StatusData'.
+ * @type {string}
+ */
 let sensorTypeId_StatusData;
 
 // More caches like these can be created on demand
-const geotabDeviceCache = {}; // key is Geotab device ID, value is the VIN of the car
+/** 
+ * A cache mapping Geotab device IDs to Vehichle Identification Numbers (VIN)
+ * @const {Object<string, string>}
+ */
+const geotabDeviceCache = {};
+/** 
+ * A cache mapping Geotab Diagnostic IDs to objects describing the Diagnostics
+ * @const {Object<string, Object>}
+ */
 const geotabDiagnosticCache = {}; // key is Geotab Diagnostic ID, value is a dictionary of properties
 
 main();
@@ -114,7 +148,7 @@ async function main() {
     sensorTypeId_StatusData = await createType_StatusData();
 
     gatewayId = await findCloudGatewayRest();
-    router_device = await initRouterDevice();
+    routerDevice = await initRouterDevice();
     
     // Storage is used to preserve the state of the polling between the invocations
     // of the script. If the storage is removed from disk of the script is started
@@ -130,9 +164,9 @@ async function main() {
 }
 
 /**
- * Read the config file in JSON format synchronosly, parse the content and return the result.
- *
+ * Read the configuration file in JSON format synchronously, parse the content and return the result.
  * @param {string} filename a file name relative to the script directory
+ * @return {Object}  the parsed configuration file
  */
 function readConfigFile(filename) {
     const abs_path = path.join(__dirname, filename);
@@ -145,6 +179,7 @@ function readConfigFile(filename) {
 
 /**
  * Create the SAP router device unless it already exists and fetch its certificate.
+ * @return {Object} A proxy object with postMeasurementData() asynchronous method.
  */
 async function initRouterDevice() {
     const routerDeviceId = await createDeviceUnlessExists(gatewayId, 'router', true);
@@ -177,15 +212,15 @@ async function initRouterDevice() {
 /** 
  * Create the SAP IoT data type to which the data of Geotab typeName 'LogRecord' are mapped. 
  *
- * A datatype is specified according to the SAP IoT Service rules as a Capability and a Sensor Type
+ * The data type is specified according to the SAP IoT Service rules as a Capability and a Sensor Type
  * providing the corresponding measurement data.
  */
 async function createType_LogRecord() {
     const capId = await createCapabilityUnlessExists('LogRecord', [
-        { name: 'latitude',  dataType: DATATYPE.float },
-        { name: 'longitude', dataType: DATATYPE.float },
-        { name: 'speed',     dataType: DATATYPE.float },
-        { name: 'dateTime',  dataType: DATATYPE.date }
+        { name: 'latitude',  dataType: DataType.FLOAT },
+        { name: 'longitude', dataType: DataType.FLOAT },
+        { name: 'speed',     dataType: DataType.FLOAT },
+        { name: 'dateTime',  dataType: DataType.DATE }
     ]);
     return createSensorTypeUnlessExists('LogRecord', capId);
 }
@@ -193,17 +228,17 @@ async function createType_LogRecord() {
 /** 
  * Map the Geotab typeName 'StatusData' and the 'Diagnostic' it references to SAP IoT Service data model. 
  *
- * A datatype is specified according to the SAP IoT Service rules as a Capability and a Sensor Type
+ * The data type is specified according to the SAP IoT Service rules as a Capability and a Sensor Type
  * providing the corresponding measurement data.
  */
 async function createType_StatusData() {
     const capId = await createCapabilityUnlessExists('StatusData', [
-        { name: 'value',          dataType: DATATYPE.float },   // StatusData.data
-        { name: 'name',           dataType: DATATYPE.string },  // Diagnostic.name
-        { name: 'code',           dataType: DATATYPE.integer }, // Diagnostic
-        { name: 'diagnosticType', dataType: DATATYPE.string },  // Diagnostic
-        { name: 'faultResetMode', dataType: DATATYPE.string },  // Diagnostic
-        { name: 'dateTime',       dataType: DATATYPE.date }     // StatusData.dateTime
+        { name: 'value',          dataType: DataType.FLOAT },   // StatusData.data
+        { name: 'name',           dataType: DataType.STRING },  // Diagnostic.name
+        { name: 'code',           dataType: DataType.INTEGER }, // Diagnostic
+        { name: 'diagnosticType', dataType: DataType.STRING },  // Diagnostic
+        { name: 'faultResetMode', dataType: DataType.STRING },  // Diagnostic
+        { name: 'dateTime',       dataType: DataType.DATE }     // StatusData.dateTime
     ]);
     return createSensorTypeUnlessExists('StatusData', capId);
 }
@@ -264,19 +299,24 @@ async function copy_StatusData() {
 }
 
 /**
- * Load the polling state from the local persistent storage.
+ * Store the polling state to the local persistent storage.
+ * @param {string} typeName as defined in the Geotab API for GetFeed()
+ * @param {string} version the value to store
+ * @return {string}  the stored value
  */
-async function loadFromVersion(dataType) {
-	let from_version = await storage.getItem(dataType);
-    return from_version;
+async function storeFromVersion(typeName, version) {
+	await storage.setItem(typeName, version);
+    return version;
 }
 
 /**
- * Store the polling state to the local persistent storage.
+ * Load the polling state from the local persistent storage.
+ * @param {string} typeName as defined in the Geotab API for GetFeed()
+ * @return {string}  the value stored for the typeName
  */
-async function storeFromVersion(dataType, version) {
-	await storage.setItem(dataType, version);
-    return version;
+async function loadFromVersion(typeName) {
+	let from_version = await storage.getItem(typeName);
+    return from_version;
 }
 
 /**
@@ -300,7 +340,7 @@ async function readGeotabRecords(typeName, fromVersion) {
                 reject(Error(error));
             } else {
                 console.debug(
-                    `Got LogRecord, toVersion: ${result.toVersion}, number or records: ${result.data.length}`);
+                    `Got ${typeName}, toVersion: ${result.toVersion}, number or records: ${result.data.length}`);
                 // console.debug('First record:', JSON.stringify(result.data[0], null, 4));
                 resolve(result);
             }
@@ -366,10 +406,10 @@ async function lookupDiagnostic(diagnosticId) {
 
 /**
  * Post an array of LogRecord objects to SAP IoT Service.
- * @param {!Array<object>} records  the records to post
+ * @param {!Object[]} records  the records to post
  */
 async function post_LogRecords(records) {
-    const measurements = {}; // Key: vehicle indentification number (VIN), value: an array of measurements
+    const measurements = {}; // Key: vehicle identification number (VIN), value: an array of measurements
     for (const record of records) {
         const geotabDeviceId = record.device.id;
         // The device alternate IDs used by SAP IoT Services are generally supposed to have some
@@ -408,7 +448,7 @@ async function post_LogRecords(records) {
     const promises = [];
     for (const vin of Object.keys(measurements)) {
         // The VIN is used as the identifier of the device for SAP IoT Service. 
-        promises.push(router_device.postMeasurementData(vin, 'LogRecord', 'LogRecord', measurements[vin]));
+        promises.push(routerDevice.postMeasurementData(vin, 'LogRecord', 'LogRecord', measurements[vin]));
     }
     // Measurements for different vehicles (devices) are POSTed concurrently.
     // The maximum number of parallel connections is defined in SAP_IoT_device_REST.
@@ -417,10 +457,14 @@ async function post_LogRecords(records) {
 
 /**
  * Post an array of StatusData objects to SAP IoT Service.
- * @param {!Array<object>} records  the records to post
+ * 
+ * Measurement data from different vehicles (devices in the SAP IoT Service data model) are POSTed concurrently.
+ * The maximum number of parallel connections is defined in SAP_IoT_device_REST.
+ * @param {!Object[]} records  the StatusData records to post
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function post_StatusData(records) {
-    const measurements = {}; // Key: vehicle indentification number (VIN), value: an array of measurements
+    const measurements = {}; // Key: vehicle identification number (VIN), value: an array of measurements
     for (const record of records) {
         const geotabDeviceId = record.device.id;
         // The device alternate IDs used by SAP IoT Services are generally supposed to have some
@@ -486,7 +530,7 @@ async function post_StatusData(records) {
 
     const promises = [];
     for (const vin of Object.keys(measurements)) {
-        promises.push(router_device.postMeasurementData(vin, 'StatusData', 'StatusData', measurements[vin]));
+        promises.push(routerDevice.postMeasurementData(vin, 'StatusData', 'StatusData', measurements[vin]));
     }
     // Measurements for different vehicles (devices) are POSTed concurrently.
     // The maximum number of parallel connections is defined in SAP_IoT_device_REST.
@@ -494,10 +538,11 @@ async function post_StatusData(records) {
 }
 
 /**
- * @async @function Create the Capability (essentially, a record-like data type) in SAP IoT Services if it does not exist yet.
+ * Create the Capability (essentially, a record-like data type) in SAP IoT Services if it does not exist yet.
  * @param {string} alternateId  the alternate ID of the created Capability
- * @param {!Array<object>} properties  an array of {name, dataType} objects describing fields of the record
+ * @param {!Array.<Object.<string, string>>} properties  an array of {name, dataType} objects describing fields of the record
  * @return {string}  the ID of the Capability used by SAP IoT Services
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function createCapabilityUnlessExists(alternateId, properties) {
     const existingCaps = await SAP_DeviceManagement.apis.Capabilities.getCapabilitiesUsingGET(
@@ -540,11 +585,12 @@ async function createCapabilityUnlessExists(alternateId, properties) {
 }
 
 /**
- * @async @function Create the sensor type in SAP IoT Services if it does not exist yet.
+ * Create the sensor type in SAP IoT Services if it does not exist yet.
  * @param {string} gatewayId  the ID of the gateway to which the device sends the data
  * @param {string} alternateId  the alternate ID of the created device
  * @param {boolean} isRouter  true if the created device can post measurements on behalf of other devices
  * @return {string}  the ID of the device used by SAP IoT Services
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function createSensorTypeUnlessExists(typeName, capabilityId, isCommand=false) {
     const existingTypes = await SAP_DeviceManagement.apis.SensorTypes.getSensorTypesUsingGET(
@@ -592,8 +638,9 @@ async function createSensorTypeUnlessExists(typeName, capabilityId, isCommand=fa
 }
 
 /**
- * @async @function Find the ID of the SAP IoT Service REST gateway
+ * Find the ID of the SAP IoT Service REST gateway
  * @return {string}  the ID of the gateway used by SAP IoT Services
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function findCloudGatewayRest() {
     const gateways = await SAP_DeviceManagement.apis.Gateways.getGatewaysUsingGET(                {
@@ -609,11 +656,12 @@ async function findCloudGatewayRest() {
 }
 
 /**
- * @async @function Create the device in SAP IoT Services if it does not exist yet.
+ * Create the device in SAP IoT Services if it does not exist yet.
  * @param {string} gatewayId  the ID of the gateway to which the device sends the data
  * @param {string} alternateId  the alternate ID of the created device
  * @param {boolean} isRouter  true if the created device can post measurements on behalf of other devices
- * @return {string}  the ID of the device used by SAP IoT Services
+ * @return {string} the ID of the device used by SAP IoT Services
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function createDeviceUnlessExists(gatewayId, alternateId, isRouter=false) {
     const existingDevices = await SAP_DeviceManagement.apis.Devices.getDevicesUsingGET(
@@ -661,11 +709,12 @@ async function createDeviceUnlessExists(gatewayId, alternateId, isRouter=false) 
 }
 
 /**
- * @async @function Create the sensor in SAP IoT Services if it does not exist yet.
+ * Create the sensor in SAP IoT Services if it does not exist yet.
  * @param {string} deviceId  the ID of the device to which the sensor is attached
  * @param {string} alternateId  the alternate ID of the created sensor
  * @param {string} sensorTypeId  the ID of the type of the created sensor
  * @return {string}  the ID of the sensor used by SAP IoT Services
+ * @throws {Error} Raises an exception when SAP IoT Service returns an error.
  */
 async function createSensorUnlessExists(deviceId, alternateId, sensorTypeId) {
     const existingSensors = await SAP_DeviceManagement.apis.Sensors.getSensorsUsingGET(
@@ -709,8 +758,9 @@ async function createSensorUnlessExists(deviceId, alternateId, sensorTypeId) {
 }
 
 /**
- * @async @function Asyc sleep for a single co-routine.
+ * Asynchronous sleep for a single co-routine.
  * @param {number} ms  timeout in milliseconds
+ * @async
  */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
