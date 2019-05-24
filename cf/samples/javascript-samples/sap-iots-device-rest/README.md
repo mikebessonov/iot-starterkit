@@ -1,3 +1,5 @@
+# Proxy IoT device module
+
 This module can be used to create proxy objects representing IoT devices
 and POST measurement data from them to IoT Service via a Cloud REST gateway.
 It uses Promises/async functions, which come handy in high-volume data transfers

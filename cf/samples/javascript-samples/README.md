@@ -1,3 +1,5 @@
+# JavaScript code samples
+
 This folder contains simple examples that are supposed to be easily extensible. You are welcome to cherry-pick
 the snippets that you find useful.
 
