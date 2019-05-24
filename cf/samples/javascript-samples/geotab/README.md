@@ -1,13 +1,12 @@
-# Copying data from a Cloud service to SAP IoT Service
-
-## Overview
+# Copying data from a third-party Cloud service to SAP IoT Service
 
 This folder contains an example that is supposed to be easily extensible. You are welcome to cherry-pick
 the snippets that you find useful.
 
 Please note that IoT Service provides links to Swagger/OpenAPI 2.0 specifications of the provided REST APIs.
 You can find the links for your instance in the IoT Services Cockpit under the 'Useful links' menu item.
-Modules like [Swagger Client](https://github.com/swagger-api/swagger-js) also available as [NPM](https://www.npmjs.com/package/swagger-client) can be used to access the APIs directly and register devices,
+Modules like [Swagger Client](https://github.com/swagger-api/swagger-js) also available as
+[NPM](https://www.npmjs.com/package/swagger-client) can be used to access the APIs directly and register devices,
 sensors and sensor types, read out measurement data, etc.
 
 ## Description
@@ -21,7 +20,7 @@ Swagger Client described above.
 ## Requirements and installation
 
 The example is written in ES8 and runs under recent versions of Node.js. This is server-side code, and we don't
-recomment to run it in a Web browser.
+recommend to run it in a Web browser.
 
 The example depends on the [Proxy IoT Device module](./sap-iots-device-rest), which was not published on NPM yet.
 It must be installed locally first with `npm install ../sap-iots-device-rest`.

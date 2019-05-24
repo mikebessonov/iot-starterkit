@@ -5,7 +5,8 @@ the snippets that you find useful.
 
 Please note that IoT Service provides links to Swagger/OpenAPI 2.0 specifications of the provided REST APIs.
 You can find the links for your instance in the IoT Services Cockpit under the 'Useful links' menu item.
-Modules like [Swagger Client](https://github.com/swagger-api/swagger-js) also available as [NPM](https://www.npmjs.com/package/swagger-client) can be used to access the APIs directly and register devices,
+Modules like [Swagger Client](https://github.com/swagger-api/swagger-js) also available as 
+[NPM](https://www.npmjs.com/package/swagger-client) can be used to access the APIs directly and register devices,
 sensors and sensor types, read out measurement data, etc.
 
 The examples provided so far run under recent versions of Node.js. They may run under some modern Web browsers too,
