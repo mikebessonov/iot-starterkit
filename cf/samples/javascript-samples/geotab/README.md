@@ -29,4 +29,4 @@ Run `npm install` in this folder to fetch the other dependencies and install the
 
 ## License
 
-The code is provided under [SAP SAMPLE CODE LICENSE AGREEMENT](./LICENSE).
+The code is provided under [SAP Sample Code License Agreement](./LICENSE).

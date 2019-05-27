@@ -7,4 +7,4 @@ typical for Cloud-to-Cloud interaction.
 
 The module can be installed with `npm install <module folder>`.
 
-The code is provided under [SAP SAMPLE CODE LICENSE AGREEMENT](./LICENSE).
+The code is provided under [SAP Sample Code License Agreement](./LICENSE).
