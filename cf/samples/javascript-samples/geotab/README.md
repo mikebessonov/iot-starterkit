@@ -27,6 +27,10 @@ It must be installed locally first with `npm install ../sap-iots-device-rest`.
 
 Run `npm install` in this folder to fetch the other dependencies and install the example.
 
+## Running the example
+
+Run `npm start` in this folder.
+
 ## License
 
 The code is provided under [SAP Sample Code License Agreement](./LICENSE).
