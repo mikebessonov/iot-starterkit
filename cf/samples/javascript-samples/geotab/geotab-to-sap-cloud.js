@@ -16,7 +16,10 @@
  * order and limit the load on the servers.
  *
  * @author Mikhail Bessonov <mikhail.bessonov@sap.com>
- * @license SAP Sample Code License Agreement
+ */
+/**
+ * @license
+ * [SAP Sample Code License Agreement](./LICENSE)
  */
 
 // Imports
@@ -67,7 +70,7 @@ const config = readConfigFile('config.json');
  * An instance of the Geotab API.
  * @type {Object}
  */
-const geotab = new Geotab_API(config.Geotab_username, config.Geotab_password, config.Geotab_database);
+const geotab = Geotab_API(config.Geotab_username, config.Geotab_password, config.Geotab_database);
 
 /** 
  * The URL of the Swagger (OpenAPI 2.0) specification of the SAP IoT Service northbound API
@@ -140,9 +143,10 @@ async function main() {
             }
         }
     });
-    //console.log('SAP northbound API', SAP_DeviceManagement);
-    //console.log('Apis:', SAP_DeviceManagement.apis);
-    //console.log('Definitions:', SAP_DeviceManagement.spec.definitions);
+    // Uncomment some of the lines below to see the SAP Device Management API or its parts.
+    // console.log('SAP northbound API', SAP_DeviceManagement);
+    // console.log('Apis:', SAP_DeviceManagement.apis);
+    // console.log('Definitions:', SAP_DeviceManagement.spec.definitions);
 
     sensorTypeId_LogRecord = await createType_LogRecord();
     sensorTypeId_StatusData = await createType_StatusData();
@@ -190,7 +194,6 @@ async function initRouterDevice() {
             tenantId: config.SAP_tenantID,
             deviceId: routerDeviceId
         });
-        // console.debug(resp);
         if (resp.ok) {
             fs.writeFileSync(absPathPem, resp.body.pem);
             fs.writeFileSync(absPathPass, resp.body.secret);
@@ -198,15 +201,14 @@ async function initRouterDevice() {
         }
     }
 
-    const router_device_pem = fs.readFileSync(absPathPem, {
-        'encoding': 'utf8'
-    }); // contains both the certificate and the private key
-    const router_device_passphrase = fs.readFileSync(absPathPass, {
-        'encoding': 'utf8'
-    }); // the private key is encrypted with it
+    // Contains both the certificate and the private key
+    const router_device_pem = fs.readFileSync(absPathPem, {'encoding': 'utf8'});
+    // The private key is encrypted with it
+    const router_device_passphrase = fs.readFileSync(absPathPass, {'encoding': 'utf8'}); 
     console.debug('The PEM and the passphrase for the router device read OK.');
     const gateway_hostname = `${config.SAP_instance}.${config.SAP_landscape}`;
-    return new SAP_IoT_device_REST(gateway_hostname, router_device_pem, router_device_pem, router_device_passphrase);
+    return SAP_IoT_device_REST(
+        gateway_hostname, router_device_pem, router_device_pem, router_device_passphrase);
 }
 
 /** 
@@ -220,6 +222,7 @@ async function createType_LogRecord() {
         { name: 'latitude',  dataType: DataType.FLOAT },
         { name: 'longitude', dataType: DataType.FLOAT },
         { name: 'speed',     dataType: DataType.FLOAT },
+        // The time stamp of the measurement
         { name: 'dateTime',  dataType: DataType.DATE }
     ]);
     return createSensorTypeUnlessExists('LogRecord', capId);
@@ -230,15 +233,24 @@ async function createType_LogRecord() {
  *
  * The data type is specified according to the SAP IoT Service rules as a Capability and a Sensor Type
  * providing the corresponding measurement data.
+ * 
+ * NOTE: The mapping is too simplistic. The Geotab typeName 'StatusData' actually contains data from
+ * different sensors distinguished by diagnostic.id. For a more proper mapping different sensors and
+ * sensor types should be created in SAP IoT Service, and data from different Geotab sensors should be
+ * modeled as coming from different SAP sensors. This is semantically correct, preserves the unit of
+ * measure, etc. We avoid such complications in this code sample.
  */
 async function createType_StatusData() {
     const capId = await createCapabilityUnlessExists('StatusData', [
-        { name: 'value',          dataType: DataType.FLOAT },   // StatusData.data
-        { name: 'name',           dataType: DataType.STRING },  // Diagnostic.name
-        { name: 'code',           dataType: DataType.INTEGER }, // Diagnostic
-        { name: 'diagnosticType', dataType: DataType.STRING },  // Diagnostic
-        { name: 'faultResetMode', dataType: DataType.STRING },  // Diagnostic
-        { name: 'dateTime',       dataType: DataType.DATE }     // StatusData.dateTime
+        // Mapping StatusData.data
+        { name: 'value',          dataType: DataType.FLOAT },
+        // The next 4 elements map the Diagnostic properties with the same name
+        { name: 'name',           dataType: DataType.STRING },
+        { name: 'code',           dataType: DataType.INTEGER },
+        { name: 'diagnosticType', dataType: DataType.STRING },
+        { name: 'faultResetMode', dataType: DataType.STRING },
+        // Mapping StatusData.dateTime, the time stamp of the measurement
+        { name: 'dateTime',       dataType: DataType.DATE }
     ]);
     return createSensorTypeUnlessExists('StatusData', capId);
 }
@@ -250,16 +262,15 @@ async function copy_LogRecords() {
     const dateType_LogRecord = 'LogRecord';
     // Geotab expect the client to maintain the polling status.
     // The marker returned by the latest call to the API must be passed to the next one
-    // as the fromVersion parameter. It is stored in the local filesystem to survive
+    // as the fromVersion parameter. It is stored in the local file system to survive
     // restarts of the script.
 	let fromVersion = await loadFromVersion(dateType_LogRecord);
-    
+
     // The loop should run infinitely in the production environment, with the DEBUG_ITERATIONS_LIMIT
     // constant set to 0 at the top of this script. Early exit is supported for debug purposes.
     let iterationsLeft = DEBUG_ITERATIONS_LIMIT;
     do {
         let result = await readGeotabRecords(dateType_LogRecord, fromVersion);
-        //console.debug(result);
         if (Array.isArray(result.data) && result.data.length > 0) {
             fromVersion = result.toVersion;
             let statusCode = await post_LogRecords(result.data);
@@ -275,7 +286,7 @@ async function copy_LogRecords() {
 /**
  * Poll Geotab for records of typeName 'StatusData' and POST them to IoT Service. 
  *
- * See the comments in the body of copy_LogRecords(). This function is very similar,
+ * See the comments in the body of {@link copy_LogRecords}. This function is very similar,
  * but kept separate for simplicity in this sample code.
  */
 async function copy_StatusData() {
@@ -285,7 +296,6 @@ async function copy_StatusData() {
     let iterationsLeft = DEBUG_ITERATIONS_LIMIT;
     do {
         let result = await readGeotabRecords(dateType_StatusData, fromVersion);
-        //console.debug(result);
         if (Array.isArray(result.data) && result.data.length > 0) {
             fromVersion = result.toVersion;
             let statusCode = await post_StatusData(result.data);
@@ -305,7 +315,7 @@ async function copy_StatusData() {
  * @return {string}  the stored value
  */
 async function storeFromVersion(typeName, version) {
-	await storage.setItem(typeName, version);
+    await storage.setItem(typeName, version);
     return version;
 }
 
@@ -315,7 +325,7 @@ async function storeFromVersion(typeName, version) {
  * @return {string}  the value stored for the typeName
  */
 async function loadFromVersion(typeName) {
-	let from_version = await storage.getItem(typeName);
+    let from_version = await storage.getItem(typeName);
     return from_version;
 }
 
@@ -323,9 +333,8 @@ async function loadFromVersion(typeName) {
  * Poll Geotab for records of the given type.
  */
 async function readGeotabRecords(typeName, fromVersion) {
-    // TODO: use the start date only if no previous records of this type were forwarded to SAP.
+    // Start fetching records from 7 days ago if no valid fromVersion is provided.
     const startDate = new Date((new Date()).getTime() - (7 * 24 * 60 * 60 * 1000)).toISOString();
-    // console.log("Start date:", startDate);
     return new Promise(function (resolve, reject) {
         geotab.call('GetFeed', {
             fromVersion,
@@ -341,6 +350,7 @@ async function readGeotabRecords(typeName, fromVersion) {
             } else {
                 console.debug(
                     `Got ${typeName}, toVersion: ${result.toVersion}, number or records: ${result.data.length}`);
+                // Uncomment the next line to see the full first record.
                 // console.debug('First record:', JSON.stringify(result.data[0], null, 4));
                 resolve(result);
             }
@@ -365,7 +375,6 @@ async function lookupDevice(geotabDeviceId) {
                 console.error('Got error:', error);
                 reject(Error(error));
             } else {
-                // console.debug('Got result:', result);
                 if (result.length > 0) {
                     resolve(result[0]);
                 } else {
@@ -393,7 +402,6 @@ async function lookupDiagnostic(diagnosticId) {
                 console.error('Got error:', error);
                 reject(Error(error));
             } else {
-                // console.debug('Got result:', result);
                 if (result.length > 0) {
                     resolve(result[0]);
                 } else {
@@ -420,29 +428,29 @@ async function post_LogRecords(records) {
             // Cache lookup failed.
             try {
                 const device = await lookupDevice(geotabDeviceId);
-                // console.debug('Got device:', device);
                 vin = device.vehicleIdentificationNumber;
-                if (!vin) {
+                if (vin) {
+                    console.info(`Caching the SAP device for the vehicle with VIN='${vin}'`);
+                    const sapDeviceId = await createDeviceUnlessExists(gatewayId, vin);
+                    await createSensorUnlessExists(sapDeviceId, 'LogRecord', sensorTypeId_LogRecord);
+                    // Add the VIN to the cache.
+                    geotabDeviceCache[geotabDeviceId] = vin;
+                } else {
                     console.error(`Geotab device with ID ${geotabDeviceId} has no vehicleIdentificationNumber, skipped!`);
-                   continue;
                 }
-                console.info(`Caching the SAP device for the vehicle with VIN='${vin}'`);
-                const sapDeviceId = await createDeviceUnlessExists(gatewayId, vin);
-                await createSensorUnlessExists(sapDeviceId, 'LogRecord', sensorTypeId_LogRecord);
-                // Add the VIN to the cache.
-                geotabDeviceCache[geotabDeviceId] = vin;
             } catch (err) {
                 console.error(`Could not look up device with ID ${geotabDeviceId}!`);
-                continue;
             }
         }
-        // Construct the SAP IoT measurement from the Geotab record.
-        (measurements[vin] = measurements[vin] || []).push({
-            latitude: record.latitude,
-            longitude: record.longitude,
-            speed: record.speed,
-            dateTime: record.dateTime
-        });
+        if (vin) {
+            // Construct the SAP IoT measurement from the Geotab record.
+            (measurements[vin] = measurements[vin] || []).push({
+                latitude: record.latitude,
+                longitude: record.longitude,
+                speed: record.speed,
+                dateTime: record.dateTime
+            });
+        }
     }
 
     const promises = [];
@@ -475,7 +483,6 @@ async function post_StatusData(records) {
             try {
                 // Cache lookup failed.
                 const device = await lookupDevice(geotabDeviceId);
-                // console.debug('Got device:', device);
                 vin = device.vehicleIdentificationNumber;
                 if (!vin) {
                     console.error(`Geotab device with ID ${geotabDeviceId} has no vehicleIdentificationNumber, skipped!`);
@@ -501,7 +508,6 @@ async function post_StatusData(records) {
             // Cache miss
             try {
                 diagnostic = await lookupDiagnostic(diagnosticId);
-                // console.debug('Got diagnostic:', diagnosticRecord);
                 console.info(`Caching the Geotab Diagnostic with ID='${diagnosticId}'`);
                 // Add the Diagnostic to the cache
                 geotabDiagnosticCache[diagnosticId] = diagnostic;
@@ -551,8 +557,6 @@ async function createCapabilityUnlessExists(alternateId, properties) {
             filter: `alternateId eq '${alternateId}'`
         }
     );
-    //console.debug('existing:', existingCaps);
-    
     if (!(existingCaps.ok && Array.isArray(existingCaps.body))) {
         throw new Error('Lookup of existing capabilities failed!');
     }
@@ -574,12 +578,10 @@ async function createCapabilityUnlessExists(alternateId, properties) {
             }
         }
     );
-    // console.info(`... status code: ${res.status}, capability ID: ${res.body.id}`);
-    
     if (!res.ok) {
         throw new Error('Capability creation failed!');
     }
-    
+
     console.info(`Capability '${alternateId}' created with ID='${res.body.id}'.`);
     return res.body.id;
 }
@@ -599,8 +601,6 @@ async function createSensorTypeUnlessExists(typeName, capabilityId, isCommand=fa
             filter: `name eq '${typeName}'`
         }
     );
-    //console.debug('existing:', existingTypes);
-    
     if (!(existingTypes.ok && Array.isArray(existingTypes.body))) {
         throw new Error('Lookup of existing sensor types failed!');
     }
@@ -627,8 +627,6 @@ async function createSensorTypeUnlessExists(typeName, capabilityId, isCommand=fa
             }
         }
     );
-    // console.info(`... status code: ${res.status}, sensor type ID: ${res.body.id}`);
-    
     if (!res.ok) {
         throw new Error('Sensor type creation failed!');
     }
@@ -670,15 +668,12 @@ async function createDeviceUnlessExists(gatewayId, alternateId, isRouter=false) 
             filter: `(alternateId eq '${alternateId}') and (gatewayId eq '${gatewayId}')`
         }
     );
-    //console.debug('existing:', existingDevices);
-    
     if (!(existingDevices.ok && Array.isArray(existingDevices.body))) {
         throw new Error('Lookup of existing devices failed!');
     }
     
     if (existingDevices.body.length > 0) {
         console.debug(`Device with alternateId '${alternateId}' found, ID='${existingDevices.body[0].id}'`);
-        //console.debug(existingDevices.body[0].authentications);
         return existingDevices.body[0].id;
     }
         
@@ -698,8 +693,6 @@ async function createDeviceUnlessExists(gatewayId, alternateId, isRouter=false) 
             tenantId: config.SAP_tenantID
         }
     );
-    // console.info(`... status code: ${res.status}, device ID: ${res.body.id}`);
-    
     if (!res.ok) {
         throw new Error('Device creation failed!');
     }
@@ -723,8 +716,6 @@ async function createSensorUnlessExists(deviceId, alternateId, sensorTypeId) {
             filter: `(deviceId eq '${deviceId}') and (alternateId eq '${alternateId}')`
         }
     );
-    //console.debug('existing:', existingSensors);
-    
     if (!(existingSensors.ok && Array.isArray(existingSensors.body))) {
         throw new Error('Lookup of existing sensors failed!');
     }
@@ -747,8 +738,6 @@ async function createSensorUnlessExists(deviceId, alternateId, sensorTypeId) {
             }
         }
     );
-    // console.info(`... status code: ${res.status}, sensor ID: ${res.body.id}`);
-    
     if (!res.ok) {
         throw new Error('Sensor creation failed!');
     }

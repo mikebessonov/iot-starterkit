@@ -10,14 +10,15 @@
  *
  * @module sap-ios-device-rest
  * @author Mikhail Bessonov <mikhail.bessonov@sap.com>
- * @license SAP Sample Code License Agreement
+ * @license [SAP Sample Code License Agreement](./LICENSE)
  */
 
 const https = require('https');
 
 const httpsAgentOptions = {
     keepAlive: true,
-    maxSockets: 16, // the maximum number of sockets per host
+    // The maximum number of sockets per host
+    maxSockets: 16,
 }
 
 const httpsAgent = new https.Agent(httpsAgentOptions);
@@ -137,13 +138,14 @@ module.exports = function (hostname, clientCertPEM, clientPrivateKeyPEM, passphr
                     if (response.statusCode === 200 || response.statusCode === 202) {
                         resolve(response.statusCode);
                     } else {
+                        // POSTing the measurement data failed. Try to recover the error messages, and throw an exception.
                         let errorMessages = '';
                         try {
                             const resp = JSON.parse(responseBody);
                             console.debug(resp);
                             errorMessages = resp[0].messages.join('\n');
                         } catch (e) {
-                            // ignore JSON parse errors
+                            // Ignore JSON parse errors and any other problems since we are handling an error already.
                         }
                         reject(Error(`Posting measurement data for device '${deviceAlternateId}', sensor '${sensorAlternateId}', capability '${capabilityAlternateId}' failed with status code ${response.statusCode}. The SAP error messages: "${errorMessages}"`));
                     }
