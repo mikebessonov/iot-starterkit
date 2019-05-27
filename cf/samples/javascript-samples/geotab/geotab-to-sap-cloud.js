@@ -16,10 +16,8 @@
  * order and limit the load on the servers.
  *
  * @author Mikhail Bessonov <mikhail.bessonov@sap.com>
- */
-/**
  * @license
- * [SAP Sample Code License Agreement](./LICENSE)
+ * SAP Sample Code License Agreement, see the LICENSE file
  */
 
 // Imports

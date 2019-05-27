@@ -11,7 +11,7 @@
  * @module sap-ios-device-rest
  * @author Mikhail Bessonov <mikhail.bessonov@sap.com>
  * @license
- * SAP Sample Code License Agreement, see {@link file:/LICENSE}
+ * SAP Sample Code License Agreement, see the LICENSE file
  */
 
 const https = require('https');
